@@ -39,9 +39,12 @@ class CurseforgeVersions(
         return version.id
     }
 
+    fun getMinecraftVersion(name: String): Int {
+        return getMinecraftVersion(name, plugin = false)
+    }
+
     fun getMinecraftVersion(name: String, plugin: Boolean): Int {
         if (!plugin) return getVersion(name, "minecraft")
-
         // Plugin
         return try {
             getVersion(name, "minecraftPlugin")
