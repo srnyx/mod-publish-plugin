@@ -11,7 +11,13 @@ plugins {
 }
 
 group = "me.modmuss50"
-version = "2.1.1"
+version =
+    System.getenv("GITHUB_REF_NAME")
+        ?.takeIf { System.getenv("GITHUB_REF_TYPE") == "tag" }
+    ?: System.getenv("GITHUB_SHA")
+        ?.takeIf { it.isNotBlank() }
+        ?.take(7)
+    ?: "dev"
 description = "The Mod Publish Plugin is a plugin for the Gradle build system to help upload artifacts to a range of common destinations."
 
 repositories {
@@ -100,3 +106,55 @@ fun replaceVersion(path: String) {
 
 replaceVersion("README.md")
 replaceVersion("docs/pages/getting_started.mdx")
+
+// Custom/additional repository
+providers.environmentVariable("MAVEN_URL")
+    .orNull
+    ?.takeIf(String::isNotBlank)
+    ?.let { mavenUrl -> publishing {
+        publications.create<MavenPublication>("pluginMaven") {
+            artifactId = "mod-publish-plugin"
+            pom {
+                name.set(project.name)
+                description.set(project.description)
+                url.set("https://github.com/modmuss50/mod-publish-plugin")
+                packaging = "jar"
+
+                developers {
+                    developer {
+                        id.set("modmuss50")
+                        url.set("https://github.com/modmuss50")
+                    }
+                    developer {
+                        id.set("srnyx")
+                        url.set("https://srnyx.com")
+                        email.set("contact@srnyx.com")
+                        timezone.set("America/New_York")
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:git://github.com/modmuss50/mod-publish-plugin.git")
+                    developerConnection.set("scm:git:ssh://github.com/modmuss50/mod-publish-plugin.git")
+                    url.set("https://github.com/modmuss50/mod-publish-plugin")
+                }
+            }
+        }
+
+        repositories.maven {
+            name = "srnyx"
+            url = uri(mavenUrl)
+
+            // Username/password
+            val mavenName = providers.environmentVariable("MAVEN_NAME")
+                .orNull
+                ?.takeIf(String::isNotBlank)
+            val mavenSecret = providers.environmentVariable("MAVEN_SECRET")
+                .orNull
+                ?.takeIf(String::isNotBlank)
+            if (mavenName != null && mavenSecret != null) credentials {
+                username = mavenName
+                password = mavenSecret
+            }
+        } }
+}
