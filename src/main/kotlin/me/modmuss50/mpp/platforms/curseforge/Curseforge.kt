@@ -185,7 +185,12 @@ interface CurseforgeOptions :
         apiEndpoint.convention("https://minecraft.curseforge.com")
         changelogType.convention("markdown")
         // Default plugin to true if loaders are ONLY plugin loaders
-        plugin.convention(modLoaders.map { loaders -> loaders.isNotEmpty() && loaders.all { it in PLUGIN_LOADERS } })
+        plugin.convention(
+            modLoaders.map { loaders ->
+                val normalized = loaders.map { it.lowercase() }
+                normalized.isNotEmpty() && normalized.all { it in PLUGIN_LOADERS }
+            },
+        )
     }
 
     override val platformDependencyKClass: KClass<CurseforgeDependency>
