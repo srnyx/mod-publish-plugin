@@ -17,7 +17,25 @@ class CurseforgeVersionsTest {
     }
 
     @Test
-    fun minecraftVersionsPlugin() {
+    fun minecraftVersionsPlugin1_8_3() {
+        val versions = createVersions()
+        assertEquals(568, versions.getMinecraftVersion("1.8.3", true))
+    }
+
+    @Test
+    fun minecraftVersionsPlugin1_8_8() {
+        val versions = createVersions()
+        assertEquals(531, versions.getMinecraftVersion("1.8.8", true))
+    }
+
+    @Test
+    fun minecraftVersionsPlugin1_12_2() {
+        val versions = createVersions()
+        assertEquals(6588, versions.getMinecraftVersion("1.12.2", true))
+    }
+
+    @Test
+    fun minecraftVersionsPlugin1_20_1() {
         val versions = createVersions()
         assertEquals(9994, versions.getMinecraftVersion("1.20.1", true))
     }

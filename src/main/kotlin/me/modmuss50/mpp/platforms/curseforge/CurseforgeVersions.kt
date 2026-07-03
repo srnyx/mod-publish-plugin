@@ -40,7 +40,17 @@ class CurseforgeVersions(
     }
 
     fun getMinecraftVersion(name: String, plugin: Boolean): Int {
-        return getVersion(name, if (plugin) "minecraftPlugin" else "minecraft")
+        if (!plugin) return getVersion(name, "minecraft")
+
+        // Plugin
+        return try {
+            getVersion(name, "minecraftPlugin")
+        } catch (_: IllegalStateException) {
+            // Try major.minor (no patch)
+            val parts = name.split(".")
+            if (parts.size < 2) throw IllegalStateException("Failed to find version: $name")
+            getVersion("${parts[0]}.${parts[1]}", "minecraftPlugin")
+        }
     }
 
     fun getModLoaderVersion(name: String): Int {
