@@ -261,8 +261,22 @@ constructor(
                 val files = HashMap<String, Path>()
                 files[primaryFileKey] = file.path
 
+                val fileTypes = HashMap<String, String>()
                 additionalFiles.files.forEachIndexed { index, additionalFile ->
-                    files["file_$index"] = additionalFile.toPath()
+                    val key = "file_$index"
+                    files[key] = additionalFile.toPath()
+
+                    val fileName = additionalFile.name
+                    fileTypes[key] = when {
+                        fileName.endsWith("javadoc.jar") -> "javadoc-jar"
+                        fileName.endsWith("sources.jar") -> "sources-jar"
+                        fileName.endsWith("dev.jar") -> "dev-jar"
+                        fileName.endsWith(".asc") ||
+                            fileName.endsWith(".gpg") ||
+                            fileName.endsWith(".pgp") ||
+                            fileName.endsWith(".sig") -> "signature"
+                        else -> "unknown"
+                    }
                 }
 
                 val dependencies = dependencies.get().map { toApiDependency(it, api) }
@@ -281,6 +295,7 @@ constructor(
                         projectId = projectId.get().modrinthId,
                         fileParts = files.keys.toList(),
                         primaryFile = primaryFileKey,
+                        fileTypes = fileTypes,
                     )
 
                 val response =
