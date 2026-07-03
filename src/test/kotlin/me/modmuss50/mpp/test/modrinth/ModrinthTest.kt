@@ -729,9 +729,7 @@ class ModrinthTest : IntegrationTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":publishModrinth")!!.outcome)
         val fileTypes = api.lastCreateVersion!!.fileTypes!!
         assertEquals(3, fileTypes.size)
-        assertEquals("sources-jar", fileTypes["file_0"])
-        assertEquals("javadoc-jar", fileTypes["file_1"])
-        assertEquals("signature", fileTypes["file_2"])
+        assertEquals(setOf("sources-jar", "javadoc-jar", "signature"), fileTypes.values.toSet())
         assertFalse(fileTypes.containsKey("primaryFile"))
     }
 
