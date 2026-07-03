@@ -82,6 +82,8 @@ class ModrinthApi(
         val fileParts: List<String>,
         @SerialName("primary_file")
         val primaryFile: String? = null,
+        @SerialName("file_types")
+        val fileTypes: Map<String, String>? = null,
     )
 
     @Serializable
