@@ -498,13 +498,13 @@ class ModrinthTest : IntegrationTest {
                 version = "1.0.0"
                 type = STABLE
                 modLoaders.add("fabric")
-
+            
                 modrinth {
                     accessToken = "123"
                     projectId = "12345678"
                     minecraftVersions.add("1.20.1")
                     environment = CLIENT_ONLY
-
+                    
                     apiEndpoint = "${server.endpoint}"
                 }
             }
@@ -773,6 +773,65 @@ class ModrinthTest : IntegrationTest {
                 ModrinthApi.AdditionalFileType.SOURCES_JAR,
                 ModrinthApi.AdditionalFileType.JAVADOC_JAR,
                 ModrinthApi.AdditionalFileType.SIGNATURE,
+            ),
+            fileTypes.values.toSet(),
+        )
+        assertFalse(fileTypes.containsKey("primaryFile"))
+    }
+
+    @Test
+    fun uploadModrinthAdditionalFilesDeduplication() {
+        val api = MockModrinthApi()
+        val server = MockWebServer(api)
+
+        val result = gradleTest()
+            .buildScript(
+                """
+            val sourcesJar = tasks.register("sourcesJar", Jar::class.java) {
+                archiveClassifier.set("sources")
+            }
+            val javadocJar = tasks.register("javadocJar", Jar::class.java) {
+                archiveClassifier.set("javadoc")
+            }
+            
+            publishMods {
+                file = tasks.jar.flatMap { it.archiveFile }
+                changelog = "Hello!"
+                version = "1.0.0"
+                type = STABLE
+                modLoaders.add("fabric")
+                
+                additionalFiles.from(sourcesJar, javadocJar)
+                
+                modrinth {
+                    accessToken = "123"
+                    projectId = "12345678"
+                    minecraftVersions.add("1.20.1")
+                    
+                    additionalFile(sourcesJar.flatMap { it.archiveFile }) {
+                        type = SOURCES_JAR
+                    }
+                    additionalFile(javadocJar.flatMap { it.archiveFile }) {
+                        type = JAVADOC_JAR
+                    }
+                    
+                    apiEndpoint = "${server.endpoint}"
+                }
+            }
+                """.trimIndent(),
+            )
+            .notConfigCacheCompatible()
+            .run("publishModrinth")
+        server.close()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":publishModrinth")!!.outcome)
+        assertEquals(3, api.lastCreateVersion!!.fileParts.size)
+        val fileTypes = api.lastCreateVersion!!.fileTypes!!
+        assertEquals(2, fileTypes.size)
+        assertEquals(
+            setOf(
+                ModrinthApi.AdditionalFileType.SOURCES_JAR,
+                ModrinthApi.AdditionalFileType.JAVADOC_JAR,
             ),
             fileTypes.values.toSet(),
         )
