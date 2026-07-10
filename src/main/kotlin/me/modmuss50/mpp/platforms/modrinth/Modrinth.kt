@@ -15,13 +15,18 @@ import me.modmuss50.mpp.PublishWorkParameters
 import me.modmuss50.mpp.Retry
 import me.modmuss50.mpp.Validators
 import me.modmuss50.mpp.path
+import me.modmuss50.mpp.platforms.modrinth.ModrinthApi.VersionType
 import org.gradle.api.Action
+import org.gradle.api.Project
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
@@ -81,6 +86,10 @@ interface ModrinthOptions :
     @get:Input
     val apiEndpoint: Property<String>
 
+    @get:Nested
+    @get:ApiStatus.Internal
+    val additionalFilesExt: MapProperty<ConfigurableFileCollection, AdditionalFileOptions>
+
     @ApiStatus.Internal
     override fun setInternalDefaults() {
         featured.convention(false)
@@ -116,6 +125,34 @@ interface ModrinthOptions :
         minecraftVersions.addAll(provider)
     }
 
+    fun additionalFile(
+        file: Any,
+        action: Action<AdditionalFileOptions>,
+    ) {
+        val options = objectFactory.newInstance(AdditionalFileOptions::class.java)
+        action.execute(options)
+
+        val fileCollection = objectFactory.fileCollection()
+        fileCollection.from(
+            when (file) {
+                is Project -> {
+                    val configuration =
+                        _thisProject.configurations.detachedConfiguration(
+                            _thisProject.dependencyFactory.create(file).setTransitive(false),
+                        )
+                    configuration.elements.map { it.single().asFile }
+                }
+
+                else -> {
+                    file
+                }
+            },
+        )
+
+        additionalFiles.from(fileCollection)
+        additionalFilesExt.put(fileCollection, options)
+    }
+
     fun from(other: ModrinthOptions) {
         super.from(other)
         fromDependencies(other)
@@ -125,6 +162,7 @@ interface ModrinthOptions :
         environment.convention(other.environment)
         projectDescription.convention(other.projectDescription)
         apiEndpoint.convention(other.apiEndpoint)
+        additionalFilesExt.convention(other.additionalFilesExt)
     }
 
     fun from(other: Provider<ModrinthOptions>) {
@@ -216,6 +254,17 @@ interface ModrinthVersionRangeOptions {
     val includeSnapshots: Property<Boolean>
 }
 
+/**
+ * Options for additional files to upload alongside the main file
+ */
+interface AdditionalFileOptions {
+    /**
+     * The type of the additional file
+     */
+    @get:Input
+    val type: Property<ModrinthApi.AdditionalFileType>
+}
+
 abstract class Modrinth
 @Inject
 constructor(
@@ -261,22 +310,24 @@ constructor(
                 val files = HashMap<String, Path>()
                 files[primaryFileKey] = file.path
 
-                val fileTypes = HashMap<String, String>()
+                val additionalFileOptions =
+                    additionalFilesExt
+                        .get()
+                        .map { (key, value) ->
+                            key.singleFile.toPath() to value
+                        }.toMap()
+
+                val fileTypes = HashMap<String, ModrinthApi.AdditionalFileType>()
                 additionalFiles.files.forEachIndexed { index, additionalFile ->
                     val key = "file_$index"
-                    files[key] = additionalFile.toPath()
+                    val path = additionalFile.toPath()
 
-                    val fileName = additionalFile.name
-                    fileTypes[key] = when {
-                        fileName.endsWith("javadoc.jar") -> "javadoc-jar"
-                        fileName.endsWith("sources.jar") -> "sources-jar"
-                        fileName.endsWith("dev.jar") -> "dev-jar"
-                        fileName.endsWith(".asc") ||
-                            fileName.endsWith(".gpg") ||
-                            fileName.endsWith(".pgp") ||
-                            fileName.endsWith(".sig") -> "signature"
-                        else -> "unknown"
-                    }
+                    // files
+                    files[key] = path
+
+                    // fileTypes
+                    val fileOptions = additionalFileOptions[path]
+                    fileTypes[key] = fileOptions?.type?.get() ?: ModrinthApi.AdditionalFileType.UNKNOWN
                 }
 
                 val dependencies = dependencies.get().map { toApiDependency(it, api) }
