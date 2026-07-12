@@ -8,7 +8,7 @@ class CurseforgeVersions(
 ) {
     companion object {
         // Not documented anywhere, but Minecraft versions for plugins use game version type ID = 1.
-        // It's not even returned in CurseForge's version-types API...
+        // It's not returned in version-types either, so the only solution is to hard-code it.
         @JvmStatic
         val PLUGIN_MINECRAFT_VERSION_TYPE_ID = 1
     }
@@ -40,12 +40,10 @@ class CurseforgeVersions(
     }
 
     fun getMinecraftVersion(name: String): Int {
-        return getMinecraftVersion(name, plugin = false)
+        return getVersion(name, "minecraft")
     }
 
-    fun getMinecraftVersion(name: String, plugin: Boolean): Int {
-        if (!plugin) return getVersion(name, "minecraft")
-        // Plugin
+    fun getMinecraftPluginVersion(name: String): Int {
         return try {
             getVersion(name, "minecraftPlugin")
         } catch (_: IllegalStateException) {

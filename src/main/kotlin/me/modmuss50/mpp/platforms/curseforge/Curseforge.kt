@@ -38,6 +38,8 @@ interface CurseforgeOptions :
     PlatformOptionsInternal<CurseforgeOptions>,
     CurseforgeDependencyContainer {
     companion object {
+        // These are only used for automatic setting of plugin property.
+        // Property can still be set manually, in which case these aren't used at all.
         @JvmStatic
         val PLUGIN_LOADERS =
             setOf(
@@ -276,11 +278,14 @@ constructor(
     override fun validateInputs() {
         super.validateInputs()
         Validators.validateUnique("minecraftVersions", minecraftVersions)
-        Validators.validateUnique("javaVersions", javaVersions)
 
-        // Plugins don't have environments
-        if (!plugin.get() && client.orNull != true && server.orNull != true) {
-            throw IllegalArgumentException("At least one of client or server must be set to true when plugin is false")
+        // Plugins don't have javaVersions or environments
+        if (!plugin.get()) {
+            Validators.validateUnique("javaVersions", javaVersions)
+
+            if (client.orNull != true && server.orNull != true) {
+                throw IllegalArgumentException("At least one of client or server must be set to true when plugin is false")
+            }
         }
     }
 
@@ -323,18 +328,21 @@ constructor(
                         },
                     )
 
+                // Mods and plugins use different game versions
                 val gameVersions = ArrayList<Int>()
-                for (version in minecraftVersions.get()) {
-                    gameVersions.add(versions.getMinecraftVersion(version, plugin.get()))
-                }
+                if (plugin.get()) {
+                    for (version in minecraftVersions.get()) {
+                        gameVersions.add(versions.getMinecraftPluginVersion(version))
+                    }
+                } else {
+                    for (version in minecraftVersions.get()) {
+                        gameVersions.add(versions.getMinecraftVersion(version))
+                    }
 
-                for (modLoader in modLoaders.get()) {
-                    // Failed mod-loaders are likely plugin-based ones (ex: "spigot")
-                    runCatching { versions.getModLoaderVersion(modLoader) }.onSuccess { gameVersions.add(it) }
-                }
+                    for (modLoader in modLoaders.get()) {
+                        gameVersions.add(versions.getModLoaderVersion(modLoader))
+                    }
 
-                // Mod-specific stuff (non-plugin)
-                if (!plugin.get()) {
                     if (client.isPresent && client.get()) {
                         gameVersions.add(versions.getClientVersion())
                     }
