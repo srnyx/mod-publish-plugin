@@ -13,6 +13,7 @@ import me.modmuss50.mpp.platforms.github.Github
 import me.modmuss50.mpp.platforms.github.GithubOptions
 import me.modmuss50.mpp.platforms.gitlab.Gitlab
 import me.modmuss50.mpp.platforms.modrinth.Modrinth
+import me.modmuss50.mpp.platforms.modrinth.ModrinthApi
 import me.modmuss50.mpp.platforms.modrinth.ModrinthEnvironment
 import me.modmuss50.mpp.platforms.modrinth.ModrinthOptions
 import org.gradle.api.Action
@@ -44,6 +45,12 @@ abstract class ModPublishExtension(val project: Project) : PublishOptions {
     val CLIENT_OR_SERVER_PREFERS_BOTH = ModrinthEnvironment.CLIENT_OR_SERVER_PREFERS_BOTH
     val CLIENT_OR_SERVER = ModrinthEnvironment.CLIENT_OR_SERVER
     val SINGLEPLAYER_ONLY = ModrinthEnvironment.SINGLEPLAYER_ONLY
+
+    val REQUIRED_RESOURCE_PACK = ModrinthApi.AdditionalFileType.REQUIRED_RESOURCE_PACK
+    val OPTIONAL_RESOURCE_PACK = ModrinthApi.AdditionalFileType.OPTIONAL_RESOURCE_PACK
+    val JAVADOC_JAR = ModrinthApi.AdditionalFileType.JAVADOC_JAR
+    val SOURCES_JAR = ModrinthApi.AdditionalFileType.SOURCES_JAR
+    val SIGNATURE = ModrinthApi.AdditionalFileType.SIGNATURE
 
     abstract val dryRun: Property<Boolean>
     val platforms: ExtensiblePolymorphicDomainObjectContainer<Platform> = project.objects.polymorphicDomainObjectContainer(Platform::class.java)
