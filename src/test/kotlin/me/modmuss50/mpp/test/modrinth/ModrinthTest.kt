@@ -518,6 +518,46 @@ class ModrinthTest : IntegrationTest {
     }
 
     @Test
+    fun uploadModrinthEnumsGroovy() {
+        val api = MockModrinthApi()
+        val server = MockWebServer(api)
+
+        val result = gradleTest(groovy = true)
+            .buildScript(
+                """
+                tasks.register("sourcesJar", Jar) {
+                    archiveClassifier = "sources"
+                }
+
+                publishMods {
+                    file = tasks.jar.archiveFile
+                    changelog = "Hello!"
+                    version = "1.0.0"
+                    type = STABLE
+                    modLoaders.add("fabric")
+
+                    modrinth {
+                        accessToken = "123"
+                        projectId = "12345678"
+                        minecraftVersions.add("1.20.1")
+                        environment = CLIENT_ONLY
+                        additionalFile(sourcesJar.archiveFile) {
+                            type = SOURCES_JAR
+                        }
+                        apiEndpoint = "${server.endpoint}"
+                    }
+                }
+                """.trimIndent(),
+            )
+            .run("publishModrinth")
+        server.close()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":publishModrinth")!!.outcome)
+        assertEquals(ModrinthEnvironment.CLIENT_ONLY, api.lastCreateVersion!!.environment)
+        assertEquals(ModrinthApi.AdditionalFileType.SOURCES_JAR, api.lastCreateVersion!!.fileTypes!!["file_0"])
+    }
+
+    @Test
     fun uploadModrinthSourcesJarType() {
         val api = MockModrinthApi()
         val server = MockWebServer(api)
