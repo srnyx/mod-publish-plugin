@@ -1,5 +1,6 @@
 package me.modmuss50.mpp.platforms.modrinth
 
+import me.modmuss50.mpp.GradleUtils
 import me.modmuss50.mpp.MinecraftApi
 import me.modmuss50.mpp.ModrinthPublishResult
 import me.modmuss50.mpp.Platform
@@ -17,7 +18,6 @@ import me.modmuss50.mpp.Validators
 import me.modmuss50.mpp.path
 import me.modmuss50.mpp.platforms.modrinth.ModrinthApi.VersionType
 import org.gradle.api.Action
-import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.provider.ListProperty
@@ -38,6 +38,62 @@ interface ModrinthOptions :
     PlatformOptions,
     PlatformOptionsInternal<ModrinthOptions>,
     ModrinthDependencyContainer {
+    @get:Internal
+    val CLIENT_ONLY: ModrinthEnvironment
+        get() = ModrinthEnvironment.CLIENT_ONLY
+
+    @get:Internal
+    val SERVER_ONLY: ModrinthEnvironment
+        get() = ModrinthEnvironment.SERVER_ONLY
+
+    @get:Internal
+    val DEDICATED_SERVER_ONLY: ModrinthEnvironment
+        get() = ModrinthEnvironment.DEDICATED_SERVER_ONLY
+
+    @get:Internal
+    val CLIENT_AND_SERVER: ModrinthEnvironment
+        get() = ModrinthEnvironment.CLIENT_AND_SERVER
+
+    @get:Internal
+    val SERVER_ONLY_CLIENT_OPTIONAL: ModrinthEnvironment
+        get() = ModrinthEnvironment.SERVER_ONLY_CLIENT_OPTIONAL
+
+    @get:Internal
+    val CLIENT_ONLY_SERVER_OPTIONAL: ModrinthEnvironment
+        get() = ModrinthEnvironment.CLIENT_ONLY_SERVER_OPTIONAL
+
+    @get:Internal
+    val CLIENT_OR_SERVER_PREFERS_BOTH: ModrinthEnvironment
+        get() = ModrinthEnvironment.CLIENT_OR_SERVER_PREFERS_BOTH
+
+    @get:Internal
+    val CLIENT_OR_SERVER: ModrinthEnvironment
+        get() = ModrinthEnvironment.CLIENT_OR_SERVER
+
+    @get:Internal
+    val SINGLEPLAYER_ONLY: ModrinthEnvironment
+        get() = ModrinthEnvironment.SINGLEPLAYER_ONLY
+
+    @get:Internal
+    val REQUIRED_RESOURCE_PACK: ModrinthApi.AdditionalFileType
+        get() = ModrinthApi.AdditionalFileType.REQUIRED_RESOURCE_PACK
+
+    @get:Internal
+    val OPTIONAL_RESOURCE_PACK: ModrinthApi.AdditionalFileType
+        get() = ModrinthApi.AdditionalFileType.OPTIONAL_RESOURCE_PACK
+
+    @get:Internal
+    val JAVADOC_JAR: ModrinthApi.AdditionalFileType
+        get() = ModrinthApi.AdditionalFileType.JAVADOC_JAR
+
+    @get:Internal
+    val SOURCES_JAR: ModrinthApi.AdditionalFileType
+        get() = ModrinthApi.AdditionalFileType.SOURCES_JAR
+
+    @get:Internal
+    val SIGNATURE: ModrinthApi.AdditionalFileType
+        get() = ModrinthApi.AdditionalFileType.SIGNATURE
+
     companion object {
         // https://github.com/modrinth/labrinth/blob/ae1c5342f2017c1c93008d1e87f1a29549dca92f/src/scheduler.rs#L112
         @JvmStatic
@@ -132,23 +188,7 @@ interface ModrinthOptions :
         val options = objectFactory.newInstance(AdditionalFileOptions::class.java)
         action.execute(options)
 
-        val fileCollection = objectFactory.fileCollection()
-        fileCollection.from(
-            when (file) {
-                is Project -> {
-                    val configuration =
-                        _thisProject.configurations.detachedConfiguration(
-                            _thisProject.dependencyFactory.create(file).setTransitive(false),
-                        )
-                    configuration.elements.map { it.single().asFile }
-                }
-
-                else -> {
-                    file
-                }
-            },
-        )
-
+        val fileCollection = GradleUtils.fileCollection(_thisProject, file)
         additionalFiles.from(fileCollection)
         additionalFilesExt.put(fileCollection, options)
     }
@@ -327,7 +367,9 @@ constructor(
 
                     // fileTypes
                     val fileOptions = additionalFileOptions[path]
-                    fileTypes[key] = fileOptions?.type?.get() ?: ModrinthApi.AdditionalFileType.UNKNOWN
+                    if (fileOptions != null) {
+                        fileTypes[key] = fileOptions.type.get()
+                    }
                 }
 
                 val dependencies = dependencies.get().map { toApiDependency(it, api) }

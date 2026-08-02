@@ -73,14 +73,8 @@ class ModrinthApi(
         @SerialName("sources-jar")
         SOURCES_JAR,
 
-        @SerialName("dev-jar")
-        DEV_JAR,
-
         @SerialName("signature")
         SIGNATURE,
-
-        @SerialName("unknown")
-        UNKNOWN,
     }
 
     @Serializable
